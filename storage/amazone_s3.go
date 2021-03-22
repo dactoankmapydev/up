@@ -66,12 +66,13 @@ func UploadPartS3(bucket, key, uploadID string, fileBytes []byte, partNum int) (
 		})
 		// Upload failed
 		if err != nil {
-			log.Println(err)
+			log.Println("request error", err)
 			// Max retries reached! Quitting
 			if try == 10 {
 				return nil, err
 			} else {
 				// Retrying
+				log.Println("request retrying")
 				try++
 			}
 		} else {

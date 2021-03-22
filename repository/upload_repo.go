@@ -1,5 +1,5 @@
 package repository
 
-type UploadRepo interface {
+/*type UploadRepo interface {
 	InsertEtag(string) error
-}
+}*/

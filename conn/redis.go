@@ -1,6 +1,6 @@
 package conn
 
-import (
+/*import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
@@ -22,5 +22,5 @@ func (rd *RedisDB) NewRedisDB() {
 		logrus.Info(err)
 	}
 	logrus.Info("successful connection to redis")
-}
+}*/
 

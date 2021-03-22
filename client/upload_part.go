@@ -1,7 +1,7 @@
 package main
 
 import (
-	"backup/helper"
+	"backup/client/helper"
 	"backup/model"
 	"bufio"
 	"bytes"
@@ -18,6 +18,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"runtime"
+	"time"
 )
 
 const maxS = 15*1024*1024
@@ -25,7 +27,6 @@ const maxS = 15*1024*1024
 func initUpload(bucket, key string) (string, string, string) {
 	r, w := io.Pipe()
 	go func() {
-		// close the writer
 		defer w.Close()
 
 		// write json data to the PipeReader through the PipeWriter
@@ -48,24 +49,23 @@ func initUpload(bucket, key string) (string, string, string) {
 		log.Println(errRequest)
 	}
 
-	//log.Println(request.Key, request.Bucket, request.UploadID)
 	return request.Bucket, request.Key, request.UploadID
 }
 
 func openFile(filePath string) *os.File {
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Println("Error opening file!!!")
+		log.Println("error opening file!!!")
 	}
 	return file
 }
 
-func uploadFilePartRoutine(bucket, key, filePath string) {
+func uploadPart(bucket, key, filePath string) {
 	// init upload
 	bucket, key, uploadID := initUpload(bucket, key)
 
 	// use errGroup
-	sem := semaphore.NewWeighted(int64(1000))
+	sem := semaphore.NewWeighted(int64(25*runtime.NumCPU()))
 	group, ctx := errgroup.WithContext(context.Background())
 
 	file := openFile(filePath)
@@ -115,6 +115,7 @@ func uploadFilePartRoutine(bucket, key, filePath string) {
 		remaining -= currentSize
 		partNum++
 		//log.Printf("Part %v complete, read %d bytes\n", partNum, len(buf))
+		log.Printf("read %d bytes\n", len(buf))
 
 		if err != nil && err != io.EOF {
 			log.Fatal(err)
@@ -132,7 +133,7 @@ func uploadFilePartRoutine(bucket, key, filePath string) {
 		// use errGroup
 		errAcquire := sem.Acquire(ctx, 1)
 		if errAcquire != nil {
-			log.Printf("Acquire err = %+v\n", err)
+			log.Printf("acquire err = %+v\n", err)
 			continue
 		}
 
@@ -150,12 +151,12 @@ func uploadFilePartRoutine(bucket, key, filePath string) {
 
 			// use errGroup
 			defer sem.Release(1)
+			time.Sleep(100 * time.Millisecond)
 
 			resp, err := helper.HttpClient.PostRequestWithRetries(uri, buffTemp, contentType)
 			if err != nil {
 				log.Println(err)
 			}
-			//log.Printf("Part %v complete, read %d bytes\n", partNum, len(buffTemp))
 
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
@@ -175,9 +176,9 @@ func uploadFilePartRoutine(bucket, key, filePath string) {
 
 	// use errGroup
 	if err := group.Wait(); err != nil {
-		log.Printf("g.Wait() err = %+v\n", err)
+		log.Printf("group.Wait() err = %+v\n", err)
 	}
-	log.Println("Bytes:", nBytes, "Chunks:", nChunks)
+	log.Println("bytes:", nBytes, "chunks:", nChunks)
 
 	// complete upload
 	completeUpload(bucket, key, uploadID, completedParts)
@@ -213,8 +214,8 @@ func completeUpload(bucket, key, uploadID string, completedParts []*s3.Completed
 
 func main() {
 	filePath := "/home/dactoan/Downloads/Win10_20H2_v2_English_x64.iso"
-	uploadFilePartRoutine("toannd-test-2", "win10_iso", filePath)
+	uploadPart("toannd-test-2", "win10_iso", filePath)
 
 	/*filePath := "/home/dactoan/Downloads/go1.16.linux-amd64.tar.gz"
-	uploadFilePartRoutine("toannd-test-2", "go1.16", filePath)*/
+	uploadPart("toannd-test-2", "go1.16", filePath)*/
 }

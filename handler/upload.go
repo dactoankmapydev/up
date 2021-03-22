@@ -2,7 +2,6 @@ package handler
 
 import (
 	"backup/model"
-	"backup/repository"
 	"backup/storage"
 	"encoding/json"
 	"github.com/labstack/echo/v4"
@@ -10,10 +9,11 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type UploadHandler struct {
-	UploadRepo repository.UploadRepo
+	//UploadRepo repository.UploadRepo
 }
 
 func (upload *UploadHandler) CreateBucketHandler(c echo.Context) error {
@@ -87,8 +87,9 @@ func (upload *UploadHandler) UploadPartHandler(c echo.Context) error {
 	if err != nil {
 		log.Println(err)
 	}
+	time.Sleep(500 * time.Millisecond)
 	complete, _ := storage.UploadPartS3(bucket, key, uploadID, bytePart, partNumber)
-	log.Printf("successfully uploaded part. upload_id: %s, key: %s, bucket: %s, byte: %d, part_number: %d", uploadID, key, bucket, len(bytePart), partNumber)
+	log.Printf("successfully uploaded part number: %d, byte: %d, upload_id: %s, key: %s, bucket: %s",partNumber, len(bytePart), uploadID, key, bucket)
 
 	return c.JSON(http.StatusOK, &model.DataUploadResp{
 		Parts: complete,

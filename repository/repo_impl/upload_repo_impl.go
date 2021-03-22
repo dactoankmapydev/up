@@ -1,6 +1,6 @@
 package repo_impl
 
-import (
+/*import (
 	"backup/conn"
 	"backup/repository"
 )
@@ -17,4 +17,4 @@ func NewBackupRepo(client *conn.RedisDB) repository.UploadRepo {
 
 func (upload *UploadRepoImpl) InsertEtag(etag string) error  {
 	return nil
-}
+}*/
